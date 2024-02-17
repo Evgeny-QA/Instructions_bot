@@ -26,7 +26,7 @@ class DataBase:
 
                 for id in ids:
                     if id is not None:
-                        users_telegram_id[id[0]] = ["", "", ""]
+                        users_telegram_id[id] = ["", "", ""]
                 return users_telegram_id
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
