@@ -26,7 +26,8 @@ class DataBase:
                 cursor = self.db.cursor()
                 '''Проверка на наличие админов в бд'''
                 cursor.execute('''SELECT phone_number
-                                  FROM Users U JOIN Admins A ON U.user_status == A.id''')
+                                  FROM Users U JOIN Admins A ON U.user_status == A.id
+                                  WHERE access IN (2, 3)''')
                 registered_phones = [phone[0] for phone in cursor.fetchall()]
                 # print(registered_phones)
 
