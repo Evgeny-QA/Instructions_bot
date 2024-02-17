@@ -8,9 +8,14 @@ class DataBase:
         self.db_name = 'Instructions_bot_database.db'
         self.db = sql.connect(self.db_name)
 
+    def write_down_actions_to_log_file(self, text):
+        """Сохранение определенных действий в текстовый файл"""
+        with open("log_changes.txt", "a") as log:
+            log.write(str(datetime.now())[:19] + "\n" + text + "\n")
+
     def get_start_bot_info_from_json(self):
-        """Сбор первоначальных настроек для запуска бота и вставка админов в бд, если их нет
-        :return: Возвращает TOKEN, список системных админов (словарь), список админов (словарь)"""
+        """Получение для запуска бота и вставка админов в бд, если их нет
+        :return: Возвращает TOKEN для подключения к боту"""
         try:
             with open('JSON_CONFIG.json', 'r', encoding='utf-8') as file:
                 data = json.load(file)
@@ -35,15 +40,8 @@ class DataBase:
                         cursor.execute('''INSERT INTO Users (user_status, phone_number, password)
                                           VALUES (2, ?, ?)''', [phone_user["phone_number"], phone_user["password"]])
 
-            '''Запись действий в лог файл'''
-            with open("log_changes.txt", "a") as log:
-                log.write(str(datetime.now())[:19] + "\n"
-                          "Запуск бота, установка параметров json файла\n")
-
+            DataBase().write_down_actions_to_log_file("Запуск бота, установка параметров json файла")
             return TOKEN
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
             return False
-
-
-# DataBase().get_start_bot_info_from_json()
