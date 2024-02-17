@@ -24,8 +24,8 @@ with sql.connect('Instructions_bot_database.db') as db:
         phone_number TEXT UNIQUE,
         password TEXT,
         configuration_pc TEXT,
-        telegram_id TEXT,
-        vk_id TEXT,
+        telegram_id INTEGER,
+        vk_id INTEGER,
         FOREIGN KEY (user_status) REFERENCES Admins(id)
     );
 
