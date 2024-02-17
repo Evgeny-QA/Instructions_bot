@@ -1,6 +1,5 @@
 import sqlite3 as sql
 
-
 with sql.connect('Instructions_bot_database.db') as db:
     cursor = db.cursor()
 
@@ -8,14 +7,14 @@ with sql.connect('Instructions_bot_database.db') as db:
     cursor.executescript("""
     CREATE TABLE IF NOT EXISTS Admins(
         id INTEGER PRIMARY KEY,
-        access INTEGER DEFAULT 0,
-        name_access TEXT
+        access INTEGER,
+        access_name TEXT
     );
         
     INSERT INTO Admins(access, name_access)
-    VALUES (0, "Пользователь"),
-           (1, "Админ"),
-           (2, "Системный админ");
+    VALUES (1, "Пользователь"),
+           (2, "Админ"),
+           (3, "Системный админ");
 
     CREATE TABLE IF NOT EXISTS Users(
         id INTEGER PRIMARY KEY,
@@ -40,7 +39,7 @@ with sql.connect('Instructions_bot_database.db') as db:
         id INTEGER PRIMARY KEY,
         program_name TEXT
     );
-    
+
     CREATE TABLE IF NOT EXISTS Instructions(
         id INTEGER PRIMARY KEY,
         program_id INTEGER,
