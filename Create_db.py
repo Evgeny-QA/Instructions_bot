@@ -8,11 +8,11 @@ with sql.connect('Instructions_bot_database.db') as db:
     cursor.executescript("""
     CREATE TABLE IF NOT EXISTS Admins(
         id INTEGER PRIMARY KEY,
-        access INTEGER DEFAULT 0,
-        name_access TEXT
+        access INTEGER,
+        access_name TEXT
     );
         
-    INSERT INTO Admins(access, name_access)
+    INSERT INTO Admins(access, access_name)
     VALUES (0, "Пользователь"),
            (1, "Админ"),
            (2, "Системный админ");
