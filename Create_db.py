@@ -15,32 +15,32 @@ with sql.connect('Instructions_bot_database.db') as db:
         id INTEGER PRIMARY KEY,
         user_status INTEGER,
         user_name TEXT,
-        phone_number TEXT,
+        phone_number TEXT UNIQUE,
         password TEXT,
-        configuration_pc TEXTб,
+        configuration_pc TEXT,
         FOREIGN KEY (user_status) REFERENCES Admins(id)
     );
 
     CREATE TABLE IF NOT EXISTS Commentaries(
         id INTEGER PRIMARY KEY,
         instruction_id INTEGER,
-        commenatry TEXT,
+        commentary TEXT,
         FOREIGN KEY (instruction_id) REFERENCES Instructions(id)
     );
 
-    CREATE TABLE IF NOT EXISTS Programms(
+    CREATE TABLE IF NOT EXISTS Programs(
         id INTEGER PRIMARY KEY,
-        programm_name TEXT
+        program_name TEXT
     );
     
     CREATE TABLE IF NOT EXISTS Instructions(
         id INTEGER PRIMARY KEY,
-        programm_id INTEGER,
+        program_id INTEGER,
         author_user_id INTEGER,
         instruction TEXT,
         grade INTEGER DEFAULT 4,
         freshness INTEGER DEFAULT 10,
-        FOREIGN KEY (programm_id) REFERENCES Programms(id),
+        FOREIGN KEY (program_id) REFERENCES Programs(id),
         FOREIGN KEY (author_user_id) REFERENCES Users(id)
     );
     """)
