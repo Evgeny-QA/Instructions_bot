@@ -6,16 +6,17 @@ from datetime import datetime
 class DataBase:
     def __init__(self):
         self.db_name = 'Instructions_bot_database.db'
-        self.db = sql.connect(self.db_name)
+        self.db = sql.connect(self.db_name, check_same_thread=False)
 
     def write_down_actions_to_log_file(self, text):
-        """Сохранение определенных действий в текстовый файл"""
+        """Сохранение определенных действий в текстовый файл
+        :param: текс для записи в лог"""
         with open("log_changes.txt", "a") as log:
             log.write(str(datetime.now())[:19] + "\n" + text + "\n")
 
-    def get_all_telegram_id_authorized_users(self):
+    def get_all_telegram_id_authorized_users(self):  # модифицировать под вк
         """Получение авторизованных пользователей при перезапуске бота
-        :return: словарь с ключами id пользователей"""
+        :return: словарь с ключами id пользователей и доступом"""
         try:
             with self.db:
                 cursor = self.db.cursor()
@@ -60,6 +61,23 @@ class DataBase:
             print(f"Произошла ошибка: {error}")
             return False
 
+    def register_new_user(self, info):  # модифицировать под вк
+        """Регистрация в бд нового пользователя
+        :param: [ид, имя и фамилия, телефон, пароль, сведения о пк]"""
+        try:
+            with self.db:
+                print(0)
+                cursor = self.db.cursor()
+                print(1)
+                print(info)
+                cursor.execute('''INSERT INTO Users (user_status, telegram_id, user_name, phone_number, password, 
+                                                     configuration_pc)
+                                  VALUES (1, ?, ?, ?, ?, ?)''', info)
+                DataBase().write_down_actions_to_log_file(f"Пользователь {info[1]} - ({info[2]}) был зарегистрирован")
+        except sql.Error as error:
+            print(f"Произошла ошибка: {error}")
+            return False
+
     def get_all_sysadmins_and_admins_phones(self):
         """Получение всех номеров зарегистрированных админов и системных админов
         :return: Возвращает список номеров"""
@@ -74,6 +92,19 @@ class DataBase:
             print(f"Произошла ошибка: {error}")
             return False
 
+    def get_all_registered_phones_and_passwords(self):
+        """Получение всех номеров зарегистрированных админов и системных админов
+        :return: Возвращает список номеров"""
+        try:
+            with self.db:
+                cursor = self.db.cursor()
+                cursor.execute('''SELECT phone_number, access
+                                  FROM Users U JOIN Admins A ON U.user_status == A.id''')
+                return [phone[0] for phone in cursor.fetchall()]
+        except sql.Error as error:
+            print(f"Произошла ошибка: {error}")
+            return False
 
 # DataBase().get_start_bot_info_from_json()
-DataBase().get_all_telegram_id_authorized_users()
+# DataBase().get_all_telegram_id_authorized_users()
+#DataBase().register_new_user([1381570918, 'миви', '+375252223344', '123', 'вощпщшпщпыкоп щоы зп щв'])
