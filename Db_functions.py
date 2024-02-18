@@ -21,13 +21,13 @@ class DataBase:
             with self.db:
                 cursor = self.db.cursor()
                 cursor.execute('''SELECT telegram_id, access
-                                  FROM Users U JOIN Admins A ON U.user_status == A.id''')
+                                  FROM Users U JOIN Admins A ON U.user_status == A.id
+                                  WHERE telegram_id IS NOT NULL''')
                 id_access = cursor.fetchall()
                 users_telegram_id = dict()
 
                 for id_, access in id_access:
-                    if id_ is not None:
-                        users_telegram_id[id_] = [access, "", ""]
+                    users_telegram_id[id_] = [access, "", ""]
                 return users_telegram_id
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
@@ -66,10 +66,7 @@ class DataBase:
         :param: [ид, имя и фамилия, телефон, пароль, сведения о пк]"""
         try:
             with self.db:
-                print(0)
                 cursor = self.db.cursor()
-                print(1)
-                print(info)
                 cursor.execute('''INSERT INTO Users (user_status, telegram_id, user_name, phone_number, password, 
                                                      configuration_pc)
                                   VALUES (1, ?, ?, ?, ?, ?)''', info)
@@ -93,18 +90,35 @@ class DataBase:
             return False
 
     def get_all_registered_phones_and_passwords(self):
-        """Получение всех номеров зарегистрированных админов и системных админов
-        :return: Возвращает список номеров"""
+        """Получение всех номеров пользователей
+        :return: Возвращает список номеров и паролей всех пользователей"""
         try:
             with self.db:
                 cursor = self.db.cursor()
-                cursor.execute('''SELECT phone_number, access
-                                  FROM Users U JOIN Admins A ON U.user_status == A.id''')
-                return [phone[0] for phone in cursor.fetchall()]
+                cursor.execute('''SELECT phone_number, password
+                                  FROM Users
+                                  WHERE phone_number IS NOT NULL''')
+                return cursor.fetchall()
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
             return False
 
+    def authorize_user_telegram(self, id_, phone):  # модифицировать под вк
+        """Авторизация пользователя в бд
+        :param: телеграмм ид пользователя, номер телефона"""
+        try:
+            with self.db:
+                cursor = self.db.cursor()
+                cursor.execute('''UPDATE Users
+                                  SET telegram_id = ?
+                                  WHERE phone_number = ?''', [id_, phone])
+                DataBase().write_down_actions_to_log_file(f"Пользователь с номером {phone} авторизовался в telegram")
+        except sql.Error as error:
+            print(f"Произошла ошибка: {error}")
+            return False
+
+
 # DataBase().get_start_bot_info_from_json()
 # DataBase().get_all_telegram_id_authorized_users()
-#DataBase().register_new_user([1381570918, 'миви', '+375252223344', '123', 'вощпщшпщпыкоп щоы зп щв'])
+# DataBase().register_new_user([1381570918, 'миви', '+375252223344', '123', 'вощпщшпщпыкоп щоы зп щв'])
+#DataBase().get_all_registered_phones_and_passwords()
