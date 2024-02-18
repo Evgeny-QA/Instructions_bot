@@ -13,20 +13,20 @@ class DataBase:
         with open("log_changes.txt", "a") as log:
             log.write(str(datetime.now())[:19] + "\n" + text + "\n")
 
-    def get_telegram_id_authorized_users(self):
+    def get_all_telegram_id_authorized_users(self):
         """Получение авторизованных пользователей при перезапуске бота
         :return: словарь с ключами id пользователей"""
         try:
             with self.db:
                 cursor = self.db.cursor()
-                cursor.execute('''SELECT telegram_id
-                                  FROM Users''')
-                ids = [id[0] for id in cursor.fetchall()]
+                cursor.execute('''SELECT telegram_id, access
+                                  FROM Users U JOIN Admins A ON U.user_status == A.id''')
+                id_access = cursor.fetchall()
                 users_telegram_id = dict()
 
-                for id in ids:
-                    if id is not None:
-                        users_telegram_id[id] = ["", "", ""]
+                for id_, access in id_access:
+                    if id_ is not None:
+                        users_telegram_id[id_] = [access, "", ""]
                 return users_telegram_id
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
@@ -76,4 +76,4 @@ class DataBase:
 
 
 # DataBase().get_start_bot_info_from_json()
-# DataBase().get_telegram_id_authorized_users()
+DataBase().get_all_telegram_id_authorized_users()
