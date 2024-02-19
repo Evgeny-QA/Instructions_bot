@@ -117,6 +117,38 @@ class DataBase:
             print(f"Произошла ошибка: {error}")
             return False
 
+    def get_users_only_for_add_admin(self):
+        """Получение информации о пользователях для прав администратора
+        :return: список c именем и номером"""
+        try:
+            with self.db:
+                cursor = self.db.cursor()
+                cursor.execute('''SELECT user_name, phone_number
+                                  FROM Users U JOIN Admins A ON U.user_status == A.id
+                                  WHERE access = 1 AND phone_number IS NOT NULL''')
+                return cursor.fetchall()
+        except sql.Error as error:
+            print(f"Произошла ошибка: {error}")
+            return False
+
+    def change_user_access_to_admin(self, phone):
+        """Повышение доступа пользователя до администратора
+        :param: номер телефона пользователя"""
+        try:
+            with self.db:
+                cursor = self.db.cursor()
+                cursor.execute('''UPDATE Users
+                                  SET user_status = (
+                                      SELECT access
+                                      FROM Admins
+                                      WHERE access_name = "Админ"
+                                  )
+                                  WHERE phone_number = ?''', [phone])
+                DataBase().write_down_actions_to_log_file(f"Пользователь с номером '{phone}' был повышен до Админа")
+        except sql.Error as error:
+            print(f"Произошла ошибка: {error}")
+            return False
+
 
 # DataBase().get_start_bot_info_from_json()
 # DataBase().get_all_telegram_id_authorized_users()
