@@ -2,13 +2,13 @@
     "TOKEN": "6637680941:AAHxNrONIdeXc2mGtl5X1f0fUSxCK585ycU",
     "main_admins": [
         {
-            "phone_number": "+375251234567",
+            "phone_number": "+375251234000",
             "password": "admin"
         }
     ],
     "admins": [
         {
-            "phone_number": "+375251112233",
+            "phone_number": "+375251112000",
             "password": "admin"
         }
     ]

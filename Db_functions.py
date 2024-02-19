@@ -137,7 +137,7 @@ class DataBase:
                 cursor = self.db.cursor()
                 cursor.execute('''SELECT user_name, phone_number
                                   FROM Users U JOIN Admins A ON U.user_status == A.id
-                                  WHERE access = 1 AND phone_number IS NOT NULL''')
+                                  WHERE access_name = "Пользователь" AND phone_number IS NOT NULL''')
                 return cursor.fetchall()
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
@@ -161,8 +161,40 @@ class DataBase:
             print(f"Произошла ошибка: {error}")
             return False
 
+    def get_admins_only_for_add_user(self):
+        """Получение информации об админах для прав пользователя
+        :return: список c именем и номером"""
+        try:
+            with self.db:
+                cursor = self.db.cursor()
+                cursor.execute('''SELECT user_name, phone_number
+                                  FROM Users U JOIN Admins A ON U.user_status == A.id
+                                  WHERE access_name = "Админ" AND phone_number IS NOT NULL''')
+                return cursor.fetchall()
+        except sql.Error as error:
+            print(f"Произошла ошибка: {error}")
+            return False
+
+    def change_admin_access_to_user(self, phone):
+        """Понижение доступа Админа до пользователя
+        :param: номер телефона пользователя (Админа)"""
+        try:
+            with self.db:
+                cursor = self.db.cursor()
+                cursor.execute('''UPDATE Users
+                                  SET user_status = (
+                                      SELECT id
+                                      FROM Admins
+                                      WHERE access_name = "Пользователь"
+                                  )
+                                  WHERE phone_number = ?''', [phone])
+                DataBase().write_down_actions_to_log_file(f"Пользователь с номером '{phone}' был лишен прав Админа")
+        except sql.Error as error:
+            print(f"Произошла ошибка: {error}")
+            return False
+
 
 # DataBase().get_start_bot_info_from_json()
 # DataBase().get_all_telegram_id_authorized_users()
 # DataBase().register_new_user([1381570918, 'миви', '+375252223344', '123', 'вощпщшпщпыкоп щоы зп щв'])
-#DataBase().get_all_registered_phones_and_passwords()
+# DataBase().get_all_registered_phones_and_passwords()
