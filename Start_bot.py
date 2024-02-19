@@ -5,7 +5,9 @@ from Db_functions import DataBase
 
 DB = DataBase()
 '''Запуск бота, получение первоначальных данных для работы с ботом'''
-bot = telebot.TeleBot(DB.get_start_bot_info_from_json())
+TOKEN = DB.get_start_bot_info_from_json()
+bot = telebot.TeleBot(TOKEN)
+
 dict_users_id_info = DB.get_all_telegram_id_authorized_users()  # {user_id: [access, "", ""]
 dict_first_reg_or_log_id = dict()  # Информация для регистрации: [шаг регистрации, id пользователя, (1)имя и фамилия,
                                    # (2)номер телефона, (3)пароль, (4)конфигурация пк] / вход [номер (10), пароль (11)]
@@ -17,7 +19,6 @@ kw_reg_or_log.add(InlineKeyboardButton("Войти", callback_data="log_in"),
                   InlineKeyboardButton("Зарегистрироваться", callback_data="registration"))
 kw_admin = InlineKeyboardMarkup()
 kw_admin.add(InlineKeyboardButton("Добавить", callback_data="add_admin"),
-             InlineKeyboardButton("Изменить", callback_data="change_admin"),
              InlineKeyboardButton("Удалить", callback_data="delete_admin"))
 
 @bot.message_handler(content_types=['text'])
@@ -132,13 +133,19 @@ def query_handler(call):
         bot.delete_message(chat_id=chat_id, message_id=dict_users_id_info[user_id][1])
         bot.send_message(chat_id, f"Пользователь c номером '{call.data[11:]}' успешно повышен до Админа!")
 
-    '''Изменение доступа действующих администраторов'''
-    if call.data == "change_admin":
-        pass
-
     '''Удаление действующих администраторов'''
     if call.data == "delete_admin":
-        pass
+        kw_only_admins = InlineKeyboardMarkup()
+        for user, phone in DB.get_admins_only_for_add_user():
+            kw_only_admins.add(InlineKeyboardButton(f"Имя - {user}, телефон - {phone}",
+                                                    callback_data=f"del_adm{phone}"))
+        bot.edit_message_text("Доступные админы:\n"
+                              "(Для отключения доступа Админ, кликните по пользователю)",
+                              chat_id=chat_id, message_id=dict_users_id_info[user_id][1], reply_markup=kw_only_admins)
+    elif call.data[:7] == "del_adm":
+        DB.change_admin_access_to_user(call.data[7:])
+        bot.delete_message(chat_id=chat_id, message_id=dict_users_id_info[user_id][1])
+        bot.send_message(chat_id, f"Пользователь c номером '{call.data[7:]}' был успешно лишен прав админа!")
 
 
 print("Ready")
