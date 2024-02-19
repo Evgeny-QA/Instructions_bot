@@ -39,22 +39,34 @@ class DataBase:
         try:
             with open('JSON_CONFIG.json', 'r', encoding='utf-8') as file:
                 data = json.load(file)
-                TOKEN, main_admins, admins = data["TOKEN"], data["main_admins"], data["admins"]
+                TOKEN, main_admins, admins = data["TOKEN"], ["Системный админ", data["main_admins"]], \
+                                                            ["Админ", data["admins"]]
             # print(TOKEN, main_admins, admins, sep="\n")
             with self.db:
                 cursor = self.db.cursor()
                 registered_phones = DataBase().get_all_sysadmins_and_admins_phones()
-
                 '''Добавление системных админов и админов'''
-                for phone_user in main_admins:
-                    if phone_user["phone_number"] not in registered_phones:
-                        cursor.execute('''INSERT INTO Users (user_status, phone_number, password)
-                                          VALUES (3, ?, ?)''', [phone_user["phone_number"], phone_user["password"]])
-                for phone_user in admins:
-                    if phone_user["phone_number"] not in registered_phones:
-                        cursor.execute('''INSERT INTO Users (user_status, phone_number, password)
-                                          VALUES (2, ?, ?)''', [phone_user["phone_number"], phone_user["password"]])
-
+                for info in [main_admins, admins]:
+                    name = info[0]
+                    for phone_and_password in info[1]:
+                        phone_and_password = dict(phone_and_password)
+                        if phone_and_password["phone_number"] not in registered_phones:
+                            cursor.execute('''INSERT INTO Users (user_status, phone_number, password)
+                                              VALUES ((
+                                                  SELECT id
+                                                  FROM Admins
+                                                  WHERE access_name = ?
+                                                  ), ?, ?)''', [name, phone_and_password["phone_number"],
+                                                                phone_and_password["password"]])
+                        else:
+                            cursor.execute('''UPDATE Users
+                                              SET user_status = (
+                                                  SELECT id
+                                                  FROM Admins
+                                                  WHERE access_name = ?
+                                                  ),  password = ?
+                                              WHERE phone_number = ?''', [name, phone_and_password["password"],
+                                                                          phone_and_password["phone_number"]])
             DataBase().write_down_actions_to_log_file("Запуск бота, установка параметров json файла")
             return TOKEN
         except sql.Error as error:
@@ -83,7 +95,7 @@ class DataBase:
                 cursor = self.db.cursor()
                 cursor.execute('''SELECT phone_number
                                   FROM Users U JOIN Admins A ON U.user_status == A.id
-                                  WHERE access IN (2, 3)''')
+                                  WHERE access_name IN ("Системный админ", "Админ")''')
                 return [phone[0] for phone in cursor.fetchall()]
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
@@ -139,7 +151,7 @@ class DataBase:
                 cursor = self.db.cursor()
                 cursor.execute('''UPDATE Users
                                   SET user_status = (
-                                      SELECT access
+                                      SELECT id
                                       FROM Admins
                                       WHERE access_name = "Админ"
                                   )
