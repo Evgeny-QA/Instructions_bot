@@ -193,6 +193,35 @@ class DataBase:
             print(f"Произошла ошибка: {error}")
             return False
 
+    def add_new_instruction_telegram(self, info):
+        """Добавление новой инструкции в базу данных
+        :param: [ид пользователя (id_telegram), название программы, название статьи,
+                статья (в виде текста из [тип данных, данные]...)]"""
+        try:
+            with self.db:
+                cursor = self.db.cursor()
+                '''Проверка есть ли уже название программы в бд'''
+                cursor.execute('''SELECT program_name
+                                  FROM Programs''')
+                all_programs_name = cursor.fetchall()
+                if info[1] not in all_programs_name:
+                    cursor.execute('''INSERT INTO Programs(program_name)
+                                      VALUES (?)''', [info[1]])
+
+                '''Внесение статьи в бд'''
+                cursor.execute('''INSERT INTO Instructions(author_user_id, program_id, instruction_name, instruction)
+                                  VALUES ((SELECT id 
+                                          FROM Users
+                                          WHERE telegram_id = ?),
+                                          (SELECT id
+                                          FROM Programs
+                                          WHERE program_name = ?), 
+                                          ?, ?)''', info)
+                DataBase().write_down_actions_to_log_file(f"Добавлена новая статья пользователем с "
+                                                          f"id_telegram({info[0]}): {info[2]}")
+        except sql.Error as error:
+            print(f"Произошла ошибка: {error}")
+            return False
 
 # DataBase().get_start_bot_info_from_json()
 # DataBase().get_all_telegram_id_authorized_users()
