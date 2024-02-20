@@ -43,8 +43,8 @@ with sql.connect('Instructions_bot_database.db') as db:
 
     CREATE TABLE IF NOT EXISTS Instructions(
         id INTEGER PRIMARY KEY,
-        program_id INTEGER,
         author_user_id INTEGER,
+        program_id INTEGER,
         instruction_name TEXT,
         instruction TEXT,
         grade INTEGER DEFAULT 4,
