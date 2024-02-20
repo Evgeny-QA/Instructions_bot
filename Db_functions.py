@@ -200,15 +200,7 @@ class DataBase:
         try:
             with self.db:
                 cursor = self.db.cursor()
-                '''Проверка есть ли уже название программы в бд'''
-                cursor.execute('''SELECT program_name
-                                  FROM Programs''')
-                all_programs_name = cursor.fetchall()
-                if info[1] not in all_programs_name:
-                    cursor.execute('''INSERT INTO Programs(program_name)
-                                      VALUES (?)''', [info[1]])
-
-                '''Внесение статьи в бд'''
+                info[1] = DataBase().get_id_program_name_by_name(info[1])
                 cursor.execute('''INSERT INTO Instructions(author_user_id, program_id, instruction_name, instruction)
                                   VALUES ((SELECT id 
                                           FROM Users
@@ -222,6 +214,30 @@ class DataBase:
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
             return False
+
+    def get_id_program_name_by_name(self, name):
+        """Получение значения ид по имени программы для вставки в статью
+        :param: имя программы
+        :return: ид программы"""
+        try:
+            with self.db:
+                cursor = self.db.cursor()
+                cursor.execute('''SELECT id
+                                  FROM Programs
+                                  WHERE program_name = ?''', [name])
+                name_id = cursor.fetchone()[0]
+                if name_id is None:
+                    cursor.execute('''INSERT INTO Programs(program_name)
+                                      VALUES (?)''', [name])
+                    cursor.execute('''SELECT MAX(id)
+                                      FROM Programs''')
+                    return cursor.fetchone()[0]
+                else:
+                    return name_id
+        except sql.Error as error:
+            print(f"Произошла ошибка: {error}")
+            return False
+
 
 # DataBase().get_start_bot_info_from_json()
 # DataBase().get_all_telegram_id_authorized_users()
