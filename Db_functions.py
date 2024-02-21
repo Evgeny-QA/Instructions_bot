@@ -39,8 +39,8 @@ class DataBase:
         try:
             with open('JSON_CONFIG.json', 'r', encoding='utf-8') as file:
                 data = json.load(file)
-                TOKEN, main_admins, admins = data["TOKEN"], ["Системный админ", data["main_admins"]], \
-                                                            ["Админ", data["admins"]]
+                TOKEN, GROUP_ID = data["TOKEN"], data["GROUP_ID"]
+                main_admins, admins = ["Системный админ", data["main_admins"]], ["Админ", data["admins"]]
             # print(TOKEN, main_admins, admins, sep="\n")
             with self.db:
                 cursor = self.db.cursor()
@@ -68,7 +68,7 @@ class DataBase:
                                               WHERE phone_number = ?''', [name, phone_and_password["password"],
                                                                           phone_and_password["phone_number"]])
             DataBase().write_down_actions_to_log_file("Запуск бота, установка параметров json файла")
-            return TOKEN
+            return [TOKEN, GROUP_ID]
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
             return False
