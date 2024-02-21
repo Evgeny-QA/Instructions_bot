@@ -1,7 +1,7 @@
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from Db_functions import DataBase
-
+from fuzzywuzzy import process
 
 DB = DataBase()
 '''Запуск бота, получение первоначальных данных для работы с ботом'''
@@ -31,14 +31,34 @@ def start(message):
         dict_first_reg_or_log_id[user_id] = [""]
     # if user_id not in dict_first_reg_or_log_id:
     #     dict_first_reg_or_log_id[user_id] = [""]
-    # 1381570918 мой
     # -1002011264106 группы
+
+    '''Вывод статей'''
+    if user_id in dict_users_id_info and dict_users_id_info[user_id][1] == [10]:
+        program_instruction = DB.get_all_instruction_and_program_names()
+        percent = process.extract(message.text, [instruction_name[1] for instruction_name in program_instruction])
+        kw_probably_instructions = InlineKeyboardMarkup()
+        for name, perc in percent:
+            print(name, perc)
+            if perc >= 60:
+                for program, instruction in program_instruction:
+                    if instruction == name:
+                        kw_probably_instructions.add(InlineKeyboardButton(f"Программа: {program} --- "
+                                                                          f"Инструкция: {instruction}",
+                                                                          callback_data=f"get_instruction{DB.get_instruction_id(instruction)}"))
+                        break
+        if percent[0][1] < 60:
+            bot.send_message(message.chat.id, "Возможных статей не найдено.")
+        else:
+            bot.send_message(message.chat.id, f"Возможные варианты:", reply_markup=kw_probably_instructions)
+
     '''Запрос на авторизацию/регистрацию'''
     if message.text == "/start":
         dict_first_reg_or_log_id[user_id] = [""]
-        if message.from_user.id not in dict_users_id_info:
+        if user_id not in dict_users_id_info:
             bot.send_message(chat_id, "Пожалуйста, войдите или зарегистрируйтесь", reply_markup=kw_reg_or_log)
         else:
+            dict_users_id_info[user_id][1] = [10]
             bot.send_message(chat_id, "Введите интересующий вас вопрос:")
 
     # перенести временно проверку and message.text[0] != "/"
@@ -61,6 +81,7 @@ def start(message):
             bot.send_message(chat_id, "Вы успешно авторизовались!")
             bot.send_message(chat_id, "Введите интересующий вас вопрос:")
             dict_first_reg_or_log_id[user_id][0] = ""
+            dict_users_id_info[user_id][1] = [10]
         else:
             bot.send_message(chat_id, "Неверный пароль, повторите попытку:")
 
@@ -73,7 +94,7 @@ def start(message):
             bot.send_message(chat_id, "Введите номер телефона (с кодом +375 (+11 символов) или 80 (+11 символов)):")
         else:
             bot.send_message(chat_id, "Веденные Имя и Фаилия превышают допустимую длину в 40 символов, "
-                                              "повторите ввод:")
+                                      "повторите ввод:")
     elif dict_first_reg_or_log_id[user_id][0] == 2 and message.text[0] != "/":
         tel = message.text.strip()
         scheme = "('{0}'[:4] == '+375' and '{0}'[1:].isdigit() and len('{0}') == 13) or" \
@@ -95,6 +116,8 @@ def start(message):
         DB.register_new_user(dict_first_reg_or_log_id[user_id][1:])
         dict_users_id_info[dict_first_reg_or_log_id[user_id][1]] = [1, "", ""]
         bot.send_message(chat_id, "Вы успешно зарегистрировались!")
+        bot.send_message(chat_id, "Введите интересующий вас вопрос:")
+        dict_users_id_info[user_id][1] = [10]
 
     '''Панель администраторов'''
     if message.text == "/admin" and dict_users_id_info[user_id][0] == 3:
@@ -117,26 +140,25 @@ def start(message):
     elif message.text == "/instruction_done" and dict_users_id_info[user_id][1][0] == 3:  # занесение статьи в бд (5)
         DB.add_new_instruction_telegram([user_id] + dict_users_id_info[user_id][1][1:3] +
                                         [str(dict_users_id_info[user_id][1][3:])[1:-1]])
-        print(str(dict_users_id_info[user_id][1][3:])[1:-1])
         dict_users_id_info[user_id][1] = ""
         bot.send_message(chat_id, "Статья успешно добавлена в базу данных!")
     elif dict_users_id_info[user_id][1] != "" and dict_users_id_info[user_id][1][0] == 3:  # написание статьи (step 4)
         if message.content_type == "text":
             dict_users_id_info[user_id][1].append(["text", message.text])
-            #bot.send_message(chat_id, "текст")
+            # bot.send_message(chat_id, "текст")
         elif message.content_type == "photo":
             photo = message.photo[-1]
             file_id = photo.file_id
             dict_users_id_info[user_id][1].append(["photo", file_id])
-            # bot.send_photo(message.chat.id, file_id)
+            # bot.send_photo(chat_id, file_id)
         elif message.content_type == "video":
             video_id = message.video.file_id
             dict_users_id_info[user_id][1].append(["video", video_id])
-            #bot.send_video(chat_id, video_id)
+            # bot.send_video(chat_id, video_id)
         elif message.content_type == "document":
             document_id = message.document.file_id
             dict_users_id_info[user_id][1].append(["document", document_id])
-            #bot.send_document(chat_id, file_id)
+            # bot.send_document(chat_id, file_id)
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -184,6 +206,20 @@ def query_handler(call):
         bot.delete_message(chat_id=chat_id, message_id=dict_users_id_info[user_id][1])
         dict_users_id_info[user_id][1] = ""
         bot.send_message(chat_id, f"Пользователь c номером '{call.data[7:]}' был успешно лишен прав админа!")
+
+    '''Получение инструкции по запросу пользователя'''
+    if call.data[:15] == "get_instruction":
+        instruction_info = DB.get_instruction_info_by_id(int(call.data[15:]))
+        for type_info, info in instruction_info:
+            print(type_info, info)
+            if type_info == "text":
+                bot.send_message(chat_id, info)
+            elif type_info == "photo":
+                bot.send_photo(chat_id, info)
+            elif type_info == "video":
+                bot.send_video(chat_id, info)
+            elif type_info == "document":
+                bot.send_document(chat_id, info)
 
 
 print("Ready")
