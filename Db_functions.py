@@ -39,9 +39,8 @@ class DataBase:
         try:
             with open('JSON_CONFIG.json', 'r', encoding='utf-8') as file:
                 data = json.load(file)
-                TOKEN, GROUP_ID = data["TOKEN"], data["GROUP_ID"]
+                TOKEN, GROUP_ID = data["TOKEN"], int(data["GROUP_ID"])
                 main_admins, admins = ["Системный админ", data["main_admins"]], ["Админ", data["admins"]]
-            # print(TOKEN, main_admins, admins, sep="\n")
             with self.db:
                 cursor = self.db.cursor()
                 registered_phones = DataBase().get_all_sysadmins_and_admins_phones()
