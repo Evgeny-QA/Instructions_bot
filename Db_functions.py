@@ -201,6 +201,7 @@ class DataBase:
             with self.db:
                 cursor = self.db.cursor()
                 info[1] = DataBase().get_id_program_name_by_name(info[1])
+                print(info[1])
                 cursor.execute('''INSERT INTO Instructions(author_user_id, program_id, instruction_name, instruction)
                                   VALUES ((SELECT id 
                                           FROM Users
@@ -225,7 +226,8 @@ class DataBase:
                 cursor.execute('''SELECT id
                                   FROM Programs
                                   WHERE program_name = ?''', [name])
-                name_id = cursor.fetchone()[0]
+                name_id = cursor.fetchone()
+                print(name_id)
                 if name_id is None:
                     cursor.execute('''INSERT INTO Programs(program_name)
                                       VALUES (?)''', [name])
@@ -233,7 +235,7 @@ class DataBase:
                                       FROM Programs''')
                     return cursor.fetchone()[0]
                 else:
-                    return name_id
+                    return name_id[0]
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
             return False
@@ -253,9 +255,43 @@ class DataBase:
             print(f"Произошла ошибка: {error}")
             return False
 
+    def get_instruction_id(self, name):
+        """Получение id статьи по имени
+        :param: название статьи
+        :return: имя статьи"""
+        try:
+            with self.db:
+                cursor = self.db.cursor()
+                cursor.execute('''SELECT id
+                                  FROM Instructions
+                                  WHERE instruction_name = ?''', [name])
+                return cursor.fetchone()[0]
+        except sql.Error as error:
+            print(f"Произошла ошибка: {error}")
+            return False
+
+    def get_instruction_info_by_id(self, id_instruction):
+        """Получение информации по статье
+        :param: id статьи
+        :return: id"""
+        try:
+            with self.db:
+                cursor = self.db.cursor()
+                cursor.execute('''SELECT instruction
+                                  FROM Instructions
+                                  WHERE id = ?''', [id_instruction])
+                info = cursor.fetchone()[0]
+                info = eval('[' + info + ']')
+                print(info)
+                return info
+        except sql.Error as error:
+            print(f"Произошла ошибка: {error}")
+            return False
 
 # DataBase().get_start_bot_info_from_json()
 # DataBase().get_all_telegram_id_authorized_users()
 # DataBase().register_new_user([1381570918, 'миви', '+375252223344', '123', 'вощпщшпщпыкоп щоы зп щв'])
 # DataBase().get_all_registered_phones_and_passwords()
 # DataBase().get_all_instruction_and_program_names()
+# DataBase().get_instruction_info_by_id(2)
+# DataBase().get_id_program_name_by_name("Часы2121")
