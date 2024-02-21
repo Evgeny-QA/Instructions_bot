@@ -238,8 +238,24 @@ class DataBase:
             print(f"Произошла ошибка: {error}")
             return False
 
+    def get_all_instruction_and_program_names(self):
+        """Получение всех имен программа-статья
+        :return: [(program_name, instruction)...]"""
+        try:
+            with self.db:
+                cursor = self.db.cursor()
+                cursor.execute('''SELECT program_name, instruction_name
+                                  FROM Instructions I JOIN Programs P ON I.program_id = P.id''')
+                name_instruction = cursor.fetchall()
+                print(name_instruction)
+                return name_instruction
+        except sql.Error as error:
+            print(f"Произошла ошибка: {error}")
+            return False
+
 
 # DataBase().get_start_bot_info_from_json()
 # DataBase().get_all_telegram_id_authorized_users()
 # DataBase().register_new_user([1381570918, 'миви', '+375252223344', '123', 'вощпщшпщпыкоп щоы зп щв'])
 # DataBase().get_all_registered_phones_and_passwords()
+# DataBase().get_all_instruction_and_program_names()
