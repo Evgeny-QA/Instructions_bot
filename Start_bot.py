@@ -1,6 +1,6 @@
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-from Db_functions import DataBase
+from Db_functions import DataBase, write_down_actions_to_log_file
 from fuzzywuzzy import process
 from time import sleep
 
@@ -23,6 +23,41 @@ kw_reg_or_log.add(InlineKeyboardButton("Войти", callback_data="log_in"),
 kw_admin = InlineKeyboardMarkup()
 kw_admin.add(InlineKeyboardButton("Добавить", callback_data="add_admin"),
              InlineKeyboardButton("Удалить", callback_data="delete_admin"))
+
+
+@bot.message_handler(commands=['help'])
+def start(message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    system_admin_info = '''Список всех доступных команд:
+        /help - список доступных команд
+        /start - прохождение регистрации или авторизация, запрос инструкции
+        /call_help - инициализация чата с админом
+        /chat_done - завершение чата с админом
+        /admin - добавление и удаление админов
+        /add_new_instruction - написание новой инструкции
+        /instruction_done - завершение и добавление в базу данных
+        '''
+    admin_info = '''Список всех доступных команд:
+        /help - список доступных команд
+        /start - прохождение регистрации или авторизация, запрос инструкции
+        /call_help - инициализация чата с админом
+        /chat_done - завершение чата с админом
+        /add_new_instruction - написание новой инструкции
+        /instruction_done - завершение и добавление в базу данных
+        '''
+    user_info = '''Список всех доступных команд:
+        /help - список доступных команд
+        /start - прохождение регистрации или авторизация, запрос инструкции
+        /call_help - инициализация чата с админом
+        /chat_done - завершение чата с админом
+        '''
+    if dict_users_id_info[user_id][0] == 3:
+        bot.send_message(chat_id, system_admin_info)
+    elif dict_users_id_info[user_id][0] == 2:
+        bot.send_message(chat_id, admin_info)
+    elif dict_users_id_info[user_id][0] == 1:
+        bot.send_message(chat_id, user_info)
 
 
 @bot.message_handler(commands=['call_help'])
@@ -278,7 +313,8 @@ def query_handler(call):
         '''Предоставление доступа к чатам друг друга'''
         dict_users_id_info[users_user_id][2][1] = user_id
         dict_users_id_info[user_id][2][1] = users_chat_id
-        bot.send_message(users_chat_id, f"Подключение админа {admin_name}, приятного общения!")
+        bot.send_message(users_chat_id, f"Подключение админа {admin_name}, приятного общения! "
+                                        f"Для завершения общения введите /chat_done")
         print(111, dict_users_id_info[users_user_id][2][1], dict_users_id_info[user_id][2][1])
 
 
@@ -289,7 +325,7 @@ def start_bot():
         bot.polling()
     except Exception as error:
         print(f"Бот был остановлен из-за ошибки: {error}")
-        DB.write_down_actions_to_log_file(f"Бот был остановлен из-за ошибки: {error}\nПерезапуск бота.")
+        write_down_actions_to_log_file(f"Бот был остановлен из-за ошибки: {error}\nПерезапуск бота.")
         sleep(10)
         start_bot()  # Перезапустить бота
 
