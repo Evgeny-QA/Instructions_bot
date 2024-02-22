@@ -27,7 +27,7 @@ class DataBase:
                 users_telegram_id = dict()
 
                 for id_, access in id_access:
-                    users_telegram_id[id_] = [access, "", ""]
+                    users_telegram_id[id_] = [access, "", ["", ""]]
                 return users_telegram_id
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
