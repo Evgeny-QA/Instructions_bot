@@ -3,12 +3,14 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from Db_functions import DataBase
 from fuzzywuzzy import process
 
+
 DB = DataBase()
 '''Запуск бота, получение первоначальных данных для работы с ботом'''
-TOKEN = DB.get_start_bot_info_from_json()
+TOKEN, GROUP_ID = DB.get_start_bot_info_from_json()
 bot = telebot.TeleBot(TOKEN)
 
-dict_users_id_info = DB.get_all_telegram_id_authorized_users()  # {user_id: [access, "", ""]
+dict_users_id_info = DB.get_all_telegram_id_authorized_users()  # {user_id: [access, "", ["", ""]]
+                                                                # второй элемент списка для чата с пользователем
 dict_first_reg_or_log_id = dict()  # Информация для регистрации: [шаг регистрации, id пользователя, (1)имя и фамилия,
                                    # (2)номер телефона, (3)пароль, (4)конфигурация пк] / вход [номер (10), пароль (11)]
 print(dict_users_id_info)
@@ -22,16 +24,51 @@ kw_admin.add(InlineKeyboardButton("Добавить", callback_data="add_admin")
              InlineKeyboardButton("Удалить", callback_data="delete_admin"))
 
 
+@bot.message_handler(commands=['call_help'])
+def start(message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+
+    '''Отправка сообщения о помощи и начале общения с админом'''
+    if message.chat.id != GROUP_ID:
+        dict_users_id_info[user_id][2][0] = "Chat_activated"
+
+        kw_chat = InlineKeyboardMarkup()
+        kw_chat.add(InlineKeyboardButton("Начать чат", callback_data=f"start_chat!{chat_id}!{user_id}"))
+        chat_member = bot.get_chat_member(chat_id, user_id)
+        user_name = chat_member.user.first_name
+
+        bot.send_message(GROUP_ID, f"Пользователю {user_name} срочно нужна помощь!", reply_markup=kw_chat)
+
+
+@bot.message_handler(commands=['chat_done'])
+def start(message):
+    user_id = message.from_user.id
+    '''Остановка чата для двоих пользователей'''
+    dict_users_id_info[user_id][2] = ["", ""]
+    dict_users_id_info[dict_users_id_info[user_id][2][1]][2] = ["", ""]
+
 @bot.message_handler(content_types=["text", "photo", "video", "document"])
 def start(message):
-    print(message.chat.id)
+    print(message.chat.id, message.from_user.id)
     chat_id = message.chat.id
     user_id = message.from_user.id
     if user_id in dict_users_id_info:
         dict_first_reg_or_log_id[user_id] = [""]
     # if user_id not in dict_first_reg_or_log_id:
     #     dict_first_reg_or_log_id[user_id] = [""]
-    # -1002011264106 группы
+
+    '''Остановка отлавливания сообщений из чата(группы) админов'''
+    if message.chat.id == GROUP_ID:
+        return
+
+    '''Отмена действий при отсутствии соединения, в противном случае чат между пользователями'''
+    if dict_users_id_info[user_id][2][0] == "Chat_activated":
+        if dict_users_id_info[user_id][2][1] == "":
+            return
+        else:
+            bot.send_message(dict_users_id_info[user_id][2][1], message.text)
+
 
     '''Вывод статей'''
     if user_id in dict_users_id_info and dict_users_id_info[user_id][1] == [10]:
@@ -221,6 +258,33 @@ def query_handler(call):
             elif type_info == "document":
                 bot.send_document(chat_id, info)
 
+    '''Старт чата с пользователем'''
+    command, users_chat_id, users_user_id = call.data.split("!")
+    users_user_id = int(users_user_id)
+    message_id = call.message.message_id
+    print(command, users_chat_id, users_user_id)
+    print(11111, call.message.message_id)
+    if command == "start_chat":
+        chat_member = bot.get_chat_member(users_chat_id, users_user_id)
+        user_name = chat_member.user.first_name
+        chat_member = bot.get_chat_member(chat_id, user_id)
+        admin_name = chat_member.user.first_name
+        print(dict_users_id_info[users_user_id])
+        print(dict_users_id_info[user_id])
+        bot.edit_message_text(f"Чат между {user_name} и {admin_name} инициализирован", GROUP_ID, message_id)
+        print(dict_users_id_info[users_user_id][2], 123, dict_users_id_info[user_id][2])
+        dict_users_id_info[user_id][2][0] = "Chat_activated"
+        '''Предоставление доступа к чатам друг друга'''
+        dict_users_id_info[users_user_id][2][1] = user_id
+        print(2)
+        dict_users_id_info[user_id][2][1] = users_chat_id
+        bot.send_message(users_chat_id, f"Подключение админа {admin_name}, приятного общения!")
+        print(111, dict_users_id_info[users_user_id][2][1], dict_users_id_info[user_id][2][1])
 
-print("Ready")
-bot.infinity_polling()
+
+try:
+    print("Bot started!")
+    bot.polling()
+except Exception as error:
+    print(f"Бот был остановлен из-за ошибки: {error}")
+    DB.write_down_actions_to_log_file(f"Бот был остановлен из-за ошибки: {error}")
