@@ -3,16 +3,17 @@ import json
 from datetime import datetime
 
 
+def write_down_actions_to_log_file(text):
+    """Сохранение определенных действий в текстовый файл
+    :param: текс для записи в лог"""
+    with open("log_changes.txt", "a") as log:
+        log.write(str(datetime.now())[:19] + "\n" + text + "\n")
+
+
 class DataBase:
     def __init__(self):
         self.db_name = 'Instructions_bot_database.db'
         self.db = sql.connect(self.db_name, check_same_thread=False)
-
-    def write_down_actions_to_log_file(self, text):
-        """Сохранение определенных действий в текстовый файл
-        :param: текс для записи в лог"""
-        with open("log_changes.txt", "a") as log:
-            log.write(str(datetime.now())[:19] + "\n" + text + "\n")
 
     def get_all_telegram_id_authorized_users(self):  # модифицировать под вк
         """Получение авторизованных пользователей при перезапуске бота
@@ -66,7 +67,7 @@ class DataBase:
                                                   ),  password = ?
                                               WHERE phone_number = ?''', [name, phone_and_password["password"],
                                                                           phone_and_password["phone_number"]])
-            DataBase().write_down_actions_to_log_file("Запуск бота, установка параметров json файла")
+            write_down_actions_to_log_file("Запуск бота, установка параметров json файла")
             return [TOKEN, GROUP_ID]
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
@@ -81,7 +82,7 @@ class DataBase:
                 cursor.execute('''INSERT INTO Users (user_status, telegram_id, user_name, phone_number, password, 
                                                      configuration_pc)
                                   VALUES (1, ?, ?, ?, ?, ?)''', info)
-                DataBase().write_down_actions_to_log_file(f"Пользователь {info[1]} - ({info[2]}) был зарегистрирован")
+                write_down_actions_to_log_file(f"Пользователь {info[1]} - ({info[2]}) был зарегистрирован")
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
             return False
@@ -123,7 +124,7 @@ class DataBase:
                 cursor.execute('''UPDATE Users
                                   SET telegram_id = ?
                                   WHERE phone_number = ?''', [id_, phone])
-                DataBase().write_down_actions_to_log_file(f"Пользователь с номером {phone} авторизовался в telegram")
+                write_down_actions_to_log_file(f"Пользователь с номером {phone} авторизовался в telegram")
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
             return False
@@ -155,7 +156,7 @@ class DataBase:
                                       WHERE access_name = "Админ"
                                   )
                                   WHERE phone_number = ?''', [phone])
-                DataBase().write_down_actions_to_log_file(f"Пользователь с номером '{phone}' был повышен до Админа")
+                write_down_actions_to_log_file(f"Пользователь с номером '{phone}' был повышен до Админа")
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
             return False
@@ -187,7 +188,7 @@ class DataBase:
                                       WHERE access_name = "Пользователь"
                                   )
                                   WHERE phone_number = ?''', [phone])
-                DataBase().write_down_actions_to_log_file(f"Пользователь с номером '{phone}' был лишен прав Админа")
+                write_down_actions_to_log_file(f"Пользователь с номером '{phone}' был лишен прав Админа")
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
             return False
@@ -209,8 +210,8 @@ class DataBase:
                                           FROM Programs
                                           WHERE program_name = ?), 
                                           ?, ?)''', info)
-                DataBase().write_down_actions_to_log_file(f"Добавлена новая статья пользователем с "
-                                                          f"id_telegram({info[0]}): {info[2]}")
+                write_down_actions_to_log_file(f"Добавлена новая статья пользователем с "
+                                               f"id_telegram({info[0]}): {info[2]}")
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
             return False
@@ -286,11 +287,3 @@ class DataBase:
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
             return False
-
-# DataBase().get_start_bot_info_from_json()
-# DataBase().get_all_telegram_id_authorized_users()
-# DataBase().register_new_user([1381570918, 'миви', '+375252223344', '123', 'вощпщшпщпыкоп щоы зп щв'])
-# DataBase().get_all_registered_phones_and_passwords()
-# DataBase().get_all_instruction_and_program_names()
-# DataBase().get_instruction_info_by_id(2)
-# DataBase().get_id_program_name_by_name("Часы2121")
