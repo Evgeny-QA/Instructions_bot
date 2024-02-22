@@ -123,3 +123,9 @@
 Запуск бота, установка параметров json файла
 2024-02-22 04:22:18
 Запуск бота, установка параметров json файла
+2024-02-22 04:32:55
+Запуск бота, установка параметров json файла
+2024-02-22 04:34:00
+Бот был остановлен из-за ошибки: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=25)
+2024-02-22 04:34:11
+Бот был остановлен из-за ошибки: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6637680941:AAHxNrONIdeXc2mGtl5X1f0fUSxCK585ycU/getUpdates?offset=1&timeout=20 (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x000001FC264795E0>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed'))

@@ -2,6 +2,7 @@ import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from Db_functions import DataBase
 from fuzzywuzzy import process
+from time import sleep
 
 
 DB = DataBase()
@@ -276,15 +277,21 @@ def query_handler(call):
         dict_users_id_info[user_id][2][0] = "Chat_activated"
         '''Предоставление доступа к чатам друг друга'''
         dict_users_id_info[users_user_id][2][1] = user_id
-        print(2)
         dict_users_id_info[user_id][2][1] = users_chat_id
         bot.send_message(users_chat_id, f"Подключение админа {admin_name}, приятного общения!")
         print(111, dict_users_id_info[users_user_id][2][1], dict_users_id_info[user_id][2][1])
 
 
-try:
-    print("Bot started!")
-    bot.polling()
-except Exception as error:
-    print(f"Бот был остановлен из-за ошибки: {error}")
-    DB.write_down_actions_to_log_file(f"Бот был остановлен из-за ошибки: {error}")
+'''Функция для запуска/перезапуска бота'''
+def start_bot():
+    try:
+        print("Bot started!")
+        bot.polling()
+    except Exception as error:
+        print(f"Бот был остановлен из-за ошибки: {error}")
+        DB.write_down_actions_to_log_file(f"Бот был остановлен из-за ошибки: {error}\nПерезапуск бота.")
+        sleep(10)
+        start_bot()  # Перезапустить бота
+
+
+start_bot()
