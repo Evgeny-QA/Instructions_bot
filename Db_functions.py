@@ -28,7 +28,7 @@ class DataBase:
                 users_telegram_id = dict()
 
                 for id_, access in id_access:
-                    users_telegram_id[id_] = [access, "", ["", ""]]
+                    users_telegram_id[id_] = [access, [10], ["", ""]]
                 return users_telegram_id
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
@@ -124,7 +124,13 @@ class DataBase:
                 cursor.execute('''UPDATE Users
                                   SET telegram_id = ?
                                   WHERE phone_number = ?''', [id_, phone])
+                cursor.execute('''SELECT access
+                                  FROM Users U JOIN Admins A ON U.user_status == A.id
+                                  WHERE phone_number = ?''', [phone])
+                access = cursor.fetchone()[0]
+
                 write_down_actions_to_log_file(f"Пользователь с номером {phone} авторизовался в telegram")
+                return [access, "", ["", ""]]
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
             return False
@@ -200,8 +206,7 @@ class DataBase:
         try:
             with self.db:
                 cursor = self.db.cursor()
-                info[1] = DataBase().get_id_program_name_by_name(info[1])
-                print(info[1])
+                DataBase().get_id_program_name_by_name(info[1])
                 cursor.execute('''INSERT INTO Instructions(author_user_id, program_id, instruction_name, instruction)
                                   VALUES ((SELECT id 
                                           FROM Users
@@ -227,15 +232,9 @@ class DataBase:
                                   FROM Programs
                                   WHERE program_name = ?''', [name])
                 name_id = cursor.fetchone()
-                print(name_id)
                 if name_id is None:
                     cursor.execute('''INSERT INTO Programs(program_name)
                                       VALUES (?)''', [name])
-                    cursor.execute('''SELECT MAX(id)
-                                      FROM Programs''')
-                    return cursor.fetchone()[0]
-                else:
-                    return name_id[0]
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
             return False
@@ -249,7 +248,6 @@ class DataBase:
                 cursor.execute('''SELECT program_name, instruction_name
                                   FROM Instructions I JOIN Programs P ON I.program_id = P.id''')
                 name_instruction = cursor.fetchall()
-                print(name_instruction)
                 return name_instruction
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")
@@ -282,7 +280,6 @@ class DataBase:
                                   WHERE id = ?''', [id_instruction])
                 info = cursor.fetchone()[0]
                 info = eval('[' + info + ']')
-                print(info)
                 return info
         except sql.Error as error:
             print(f"Произошла ошибка: {error}")

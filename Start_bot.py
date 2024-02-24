@@ -10,7 +10,7 @@ DB = DataBase()
 TOKEN, GROUP_ID = DB.get_start_bot_info_from_json()
 bot = telebot.TeleBot(TOKEN)
 
-dict_users_id_info = DB.get_all_telegram_id_authorized_users()  # {user_id: [access, "", ["", ""]]
+dict_users_id_info = DB.get_all_telegram_id_authorized_users()  # {user_id: [access, [10], ["", ""]]
                                                                 # второй элемент списка для чата с пользователем
 dict_first_reg_or_log_id = dict()  # Информация для регистрации: [шаг регистрации, id пользователя, (1)имя и фамилия,
                                    # (2)номер телефона, (3)пароль, (4)конфигурация пк] / вход [номер (10), пароль (11)]
@@ -66,6 +66,7 @@ def start(message):
     '''Отправка сообщения о помощи и начале общения с админом'''
     if message.chat.id != GROUP_ID:
         dict_users_id_info[user_id][2][0] = "Chat_activated"
+        dict_users_id_info[user_id][1] = ""
 
         kw_chat = InlineKeyboardMarkup()
         kw_chat.add(InlineKeyboardButton("Начать чат", callback_data=f"start_chat!{chat_id}!{user_id}"))
@@ -79,23 +80,23 @@ def start(message):
 def start(message):
     user_id = message.from_user.id
     '''Остановка чата для двоих пользователей'''
-    dict_users_id_info[user_id][2] = ["", ""]
-    dict_users_id_info[dict_users_id_info[user_id][2][1]][2] = ["", ""]
+    for id_ in [user_id, int(dict_users_id_info[user_id][2][1])]:
+        dict_users_id_info[id_][2] = ["", ""]
+        dict_users_id_info[id_][1] = [10]
+        bot.send_message(id_, "Чат завершен!")
 
 
 @bot.message_handler(content_types=["text", "photo", "video", "document"])
 def start(message):
     chat_id = message.chat.id
     user_id = message.from_user.id
-    if user_id in dict_users_id_info:
-        dict_first_reg_or_log_id[user_id] = [""]
 
     '''Остановка отлавливания сообщений из чата(группы) админов'''
     if message.chat.id == GROUP_ID:
         return
 
     '''Отмена действий при отсутствии соединения, в противном случае чат между пользователями'''
-    if dict_users_id_info[user_id][2][0] == "Chat_activated":
+    if user_id in dict_users_id_info and dict_users_id_info[user_id][2][0] == "Chat_activated":
         if dict_users_id_info[user_id][2][1] == "":
             return
         else:
@@ -129,7 +130,7 @@ def start(message):
             bot.send_message(chat_id, "Введите интересующий вас вопрос:")
 
     '''Вход'''
-    if message.text[0] != "/":
+    if message.content_type == "text" and message.text[0] != "/" and user_id in dict_first_reg_or_log_id:
         if dict_first_reg_or_log_id[user_id][0] == 10:
             for index, phone in enumerate(dict_first_reg_or_log_id[user_id][2]):
                 if message.text == phone[0]:
@@ -141,7 +142,7 @@ def start(message):
                 bot.send_message(chat_id, "Пользователя с таким телефоном нет, повторите попытку:")
         elif dict_first_reg_or_log_id[user_id][0] == 11:
             if message.text == dict_first_reg_or_log_id[user_id][1][1]:
-                DB.authorize_user_telegram(user_id, dict_first_reg_or_log_id[user_id][1][0])
+                dict_users_id_info[user_id]=DB.authorize_user_telegram(user_id, dict_first_reg_or_log_id[user_id][1][0])
                 bot.send_message(chat_id, "Вы успешно авторизовались!")
                 bot.send_message(chat_id, "Введите интересующий вас вопрос:")
                 dict_first_reg_or_log_id[user_id][0] = ""
@@ -178,47 +179,50 @@ def start(message):
             dict_first_reg_or_log_id[user_id][0] = [""]
             dict_first_reg_or_log_id[user_id].append(message.text)  # Характеристики ПК
             DB.register_new_user(dict_first_reg_or_log_id[user_id][1:])
-            dict_users_id_info[dict_first_reg_or_log_id[user_id][1]] = [1, "", ""]
+            dict_users_id_info[dict_first_reg_or_log_id[user_id][1]] = [1, "", ["", ""]]
+            dict_users_id_info[user_id][1] = [10]
             bot.send_message(chat_id, "Вы успешно зарегистрировались!")
             bot.send_message(chat_id, "Введите интересующий вас вопрос:")
-            dict_users_id_info[user_id][1] = [10]
+            return
 
     '''Панель администраторов'''
     if message.text == "/admin" and dict_users_id_info[user_id][0] == 3:
         dict_users_id_info[user_id][1] = message.message_id + 1  # сохранение ид сообщения
         bot.send_message(chat_id, "Выберите предпочитаемое действие:", reply_markup=kw_admin)
+        return
 
     '''Добавление статьи/инструкции'''
-    if message.text == "/add_new_instruction" and dict_users_id_info[user_id][0] in (2, 3):  # step 1
-        dict_users_id_info[user_id][1] = [1]
-        bot.send_message(chat_id, "Введите название программы:")
-    elif dict_users_id_info[user_id][1] != "" and dict_users_id_info[user_id][1][0] == 1:  # step 2
-        dict_users_id_info[user_id][1].append(message.text)
-        dict_users_id_info[user_id][1][0] = 2
-        bot.send_message(chat_id, "Введите название статьи:")
-    elif dict_users_id_info[user_id][1] != "" and dict_users_id_info[user_id][1][0] == 2:  # step 3
-        dict_users_id_info[user_id][1].append(message.text)
-        dict_users_id_info[user_id][1][0] = 3
-        bot.send_message(chat_id, "Введите статью (весь необходимый текст, фото, видео и файлы по одному за сообщение) "
-                                  "\nКогда статья будет готова, введите /instruction_done")
-    elif message.text == "/instruction_done" and dict_users_id_info[user_id][1][0] == 3:  # занесение статьи в бд (5)
-        DB.add_new_instruction_telegram([user_id] + dict_users_id_info[user_id][1][1:3] +
-                                        [str(dict_users_id_info[user_id][1][3:])[1:-1]])
-        dict_users_id_info[user_id][1] = ""
-        bot.send_message(chat_id, "Статья успешно добавлена в базу данных!")
-    elif dict_users_id_info[user_id][1] != "" and dict_users_id_info[user_id][1][0] == 3:  # написание статьи (step 4)
-        if message.content_type == "text":
-            dict_users_id_info[user_id][1].append(["text", message.text])
-        elif message.content_type == "photo":
-            photo = message.photo[-1]
-            file_id = photo.file_id
-            dict_users_id_info[user_id][1].append(["photo", file_id])
-        elif message.content_type == "video":
-            video_id = message.video.file_id
-            dict_users_id_info[user_id][1].append(["video", video_id])
-        elif message.content_type == "document":
-            document_id = message.document.file_id
-            dict_users_id_info[user_id][1].append(["document", document_id])
+    if user_id in dict_users_id_info:
+        if message.text == "/add_new_instruction" and dict_users_id_info[user_id][0] in (2, 3):  # step 1
+            dict_users_id_info[user_id][1] = [1]
+            bot.send_message(chat_id, "Введите название программы:")
+        elif dict_users_id_info[user_id][1] != "" and dict_users_id_info[user_id][1][0] == 1:  # step 2
+            dict_users_id_info[user_id][1].append(message.text)
+            dict_users_id_info[user_id][1][0] = 2
+            bot.send_message(chat_id, "Введите название статьи:")
+        elif dict_users_id_info[user_id][1] != "" and dict_users_id_info[user_id][1][0] == 2:  # step 3
+            dict_users_id_info[user_id][1].append(message.text)
+            dict_users_id_info[user_id][1][0] = 3
+            bot.send_message(chat_id, "Введите статью (весь необходимый текст, фото, видео и файлы по одному за "
+                                      "сообщение)\nКогда статья будет готова, введите /instruction_done")
+        elif message.text == "/instruction_done" and dict_users_id_info[user_id][1][0] == 3:  # занесение статьи в бд(5)
+            DB.add_new_instruction_telegram([user_id] + dict_users_id_info[user_id][1][1:3] +
+                                            [str(dict_users_id_info[user_id][1][3:])[1:-1]])
+            dict_users_id_info[user_id][1] = [10]
+            bot.send_message(chat_id, "Статья успешно добавлена в базу данных!")
+        elif dict_users_id_info[user_id][1] != "" and dict_users_id_info[user_id][1][0] == 3:  # написание статьи(step4)
+            if message.content_type == "text":
+                dict_users_id_info[user_id][1].append(["text", message.text])
+            elif message.content_type == "photo":
+                photo = message.photo[-1]
+                file_id = photo.file_id
+                dict_users_id_info[user_id][1].append(["photo", file_id])
+            elif message.content_type == "video":
+                video_id = message.video.file_id
+                dict_users_id_info[user_id][1].append(["video", video_id])
+            elif message.content_type == "document":
+                document_id = message.document.file_id
+                dict_users_id_info[user_id][1].append(["document", document_id])
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -231,11 +235,13 @@ def query_handler(call):
     if call.data == "registration":
         dict_first_reg_or_log_id[user_id] = [1, user_id]
         bot.send_message(chat_id, "Введите Имя и Фамилию (не более 40 символов):")
+        return
 
-        '''Нажатие на кнопку входа'''
+    # '''Нажатие на кнопку входа'''
     elif call.data == "log_in":
         dict_first_reg_or_log_id[user_id] = [10, 11, DB.get_all_registered_phones_and_passwords()]
         bot.send_message(chat_id, "Введите номер телефона:")
+        return
 
     '''Добавление администратора'''
     if call.data == "add_admin":
@@ -249,7 +255,7 @@ def query_handler(call):
     elif call.data[:11] == "add_new_adm":
         DB.change_user_access_to_admin(call.data[11:])
         bot.delete_message(chat_id=chat_id, message_id=dict_users_id_info[user_id][1])
-        dict_users_id_info[user_id][1] = ""
+        dict_users_id_info[user_id][1] = [10]
         bot.send_message(chat_id, f"Пользователь c номером '{call.data[11:]}' успешно повышен до Админа!")
 
     '''Удаление действующих администраторов'''
@@ -264,7 +270,7 @@ def query_handler(call):
     elif call.data[:7] == "del_adm":
         DB.change_admin_access_to_user(call.data[7:])
         bot.delete_message(chat_id=chat_id, message_id=dict_users_id_info[user_id][1])
-        dict_users_id_info[user_id][1] = ""
+        dict_users_id_info[user_id][1] = [10]
         bot.send_message(chat_id, f"Пользователь c номером '{call.data[7:]}' был успешно лишен прав админа!")
 
     '''Получение инструкции по запросу пользователя'''
@@ -281,22 +287,24 @@ def query_handler(call):
                 bot.send_document(chat_id, info)
 
     '''Старт чата с пользователем'''
-    command, users_chat_id, users_user_id = call.data.split("!")
-    users_user_id = int(users_user_id)
-    message_id = call.message.message_id
-    if command == "start_chat":
-        chat_member = bot.get_chat_member(users_chat_id, users_user_id)
-        user_name = chat_member.user.first_name
-        chat_member = bot.get_chat_member(chat_id, user_id)
-        admin_name = chat_member.user.first_name
+    if "!" in call.data and user_id in dict_users_id_info:
+        command, users_chat_id, users_user_id = call.data.split("!")
+        users_user_id = int(users_user_id)
+        message_id = call.message.message_id
+        if command == "start_chat":
+            chat_member = bot.get_chat_member(users_chat_id, users_user_id)
+            user_name = chat_member.user.first_name
+            chat_member = bot.get_chat_member(chat_id, user_id)
+            admin_name = chat_member.user.first_name
 
-        bot.edit_message_text(f"Чат между {user_name} и {admin_name} инициализирован", GROUP_ID, message_id)
-        dict_users_id_info[user_id][2][0] = "Chat_activated"
-        '''Предоставление доступа к чатам друг друга'''
-        dict_users_id_info[users_user_id][2][1] = user_id
-        dict_users_id_info[user_id][2][1] = users_chat_id
-        bot.send_message(users_chat_id, f"Подключение админа {admin_name}, приятного общения! "
-                                        f"Для завершения общения введите /chat_done")
+            bot.edit_message_text(f"Чат между {user_name} и {admin_name} инициализирован", GROUP_ID, message_id)
+            dict_users_id_info[user_id][2][0] = "Chat_activated"
+            '''Предоставление доступа к чатам друг друга'''
+            dict_users_id_info[users_user_id][2][1] = user_id
+            dict_users_id_info[user_id][2][1] = users_chat_id
+            bot.send_message(users_chat_id, f"Подключение админа {admin_name}, приятного общения! "
+                                            f"Для завершения общения введите /chat_done")
+            bot.send_message(user_id, f"Чат с пользователем {user_name} начат!")
 
 
 '''Функция для запуска/перезапуска бота'''
